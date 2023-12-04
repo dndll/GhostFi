@@ -173,16 +173,16 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1699374550,
-        "narHash": "sha256-c6HE9UK21F1oSuaIFj3Ct1JPWDMhKrDUx3VP+tHLako=",
+        "lastModified": 1701131846,
+        "narHash": "sha256-oADbz3q/IB875bERN8ngQMi1Kx/vrhess/+DyevtgGI=",
         "owner": "noir-lang",
         "repo": "noir",
-        "rev": "47f0130c0d154f1b70eb23f376783beb3f23ad72",
+        "rev": "4d133c50a50f21ca23861a9d1987207bd8783d36",
         "type": "github"
       },
       "original": {
         "owner": "noir-lang",
-        "ref": "v0.19.2",
+        "ref": "v0.19.4",
         "repo": "noir",
         "type": "github"
       }

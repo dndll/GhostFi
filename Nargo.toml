@@ -2,7 +2,7 @@
 version = "0.0.1"
 authors = ["dndll", "Patrick1904", "calebjacob", "milenakrawczyk"]
 edition = "2021"
-compiler_version = ">=0.19.2"
+compiler_version = ">=0.19.4"
 
 [workspace]
-members = ["circuits/simple4x"]
+members = ["circuits/simple4x", "circuits/ed25519", "circuits/biguint"]
