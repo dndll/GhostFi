@@ -1,0 +1,7 @@
+# Forked from shuklaayush/biguint for a few reasons:
+# - its pegged to v0.9
+# - Introduce unconstrained function  for building BigUint as noir has removed it
+[package]
+name = "biguint"
+authors = ["shuklaayush", "dndll"]
+type = "lib"

@@ -3,3 +3,6 @@ name = "simple4x"
 type = "bin"
 
 [dependencies]
+bigint = { path = "../biguint" }
+ed25519 = { path = "../ed25519" }
+

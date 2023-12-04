@@ -5,7 +5,7 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay.url = "github:oxalica/rust-overlay";
-    noir-lang.url = "github:noir-lang/noir/v0.19.2";
+    noir-lang.url = "github:noir-lang/noir/v0.19.4";
   };
 
   outputs = { self, nixpkgs, flake-utils, rust-overlay, noir-lang, ... }:
