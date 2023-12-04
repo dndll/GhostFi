@@ -1,0 +1,12 @@
+[package]
+name = "registrar"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+forgery-detection-zero = "0.3.0"
+leptess = "0.14.0"
+image = "0.24"
+mrtd = "0.5.1"
