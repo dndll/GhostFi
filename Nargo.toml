@@ -1,0 +1,8 @@
+[workspace.package]
+version = "0.0.1"
+authors = ["dndll", "Patrick1904", "calebjacob", "milenakrawczyk"]
+edition = "2021"
+compiler_version = ">=0.19.2"
+
+[workspace]
+members = ["circuits/simple4x"]
