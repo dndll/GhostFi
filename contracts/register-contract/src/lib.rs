@@ -7,7 +7,7 @@ use near_sdk::json_types::U128;
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
     pub registered_loans: UnorderedMap<PublicKey, Vec<U128>>, // public_key -> loan amounts
-    pub prover_pk: PublicKey,
+    pub prover: AccountId,
 }
 
 #[near_bindgen]
@@ -15,11 +15,11 @@ impl Contract {
 
     #[init]
     pub fn initialize(
-        prover_pk: PublicKey,
+        prover: AccountId,
     ) -> Self {
         return Self {
             registered_loans: UnorderedMap::new(b"s".to_vec()),
-            prover_pk: prover_pk,
+            prover: prover,
         };
     }
 
@@ -39,7 +39,12 @@ impl Contract {
     }
 
     pub fn verified_loan(&mut self, user_pk: PublicKey, amount: U128) -> bool{
-        // TODO verify caller
+        if env::predecessor_account_id() != self.prover {
+            log!(format!(
+                "Forbidden"
+            ));
+            return false;
+        }
         if !self.is_user_registered(user_pk.clone()) {
             log!(format!(
                 "User is not registered"
@@ -92,18 +97,18 @@ mod tests {
     fn test_initialize() {
         let mut context = get_context(accounts(1));
         testing_env!(context.build());
-        let prover_pk = PublicKey::from_str("ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
-        let contract = Contract::initialize(prover_pk.clone());
+        let prover = AccountId::from_str("prover.near").unwrap();
+        let contract = Contract::initialize(prover.clone());
         testing_env!(context.is_view(true).build());
         assert_eq!(contract.registered_loans.is_empty(), true);
-        assert_eq!(contract.prover_pk, prover_pk)
+        assert_eq!(contract.prover, prover)
     }
 
     #[test]
     fn test_register_new_user() {
-        let prover_pk = PublicKey::from_str("ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
+        let prover = AccountId::from_str("prover.near").unwrap();
         let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
-        let mut contract = Contract::initialize(prover_pk);
+        let mut contract = Contract::initialize(prover);
         assert_eq!(contract.register(new_user_pk.clone()), true);
         assert_eq!(contract.registered_loans.len(), 1);
         assert_eq!(contract.registered_loans.get(&new_user_pk), Some(Vec::new()));
@@ -111,9 +116,9 @@ mod tests {
 
     #[test]
     fn test_register_existing_user() {
-        let prover_pk = PublicKey::from_str("ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
+        let prover = AccountId::from_str("prover.near").unwrap();
         let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
-        let mut contract = Contract::initialize(prover_pk);
+        let mut contract = Contract::initialize(prover);
         assert_eq!(contract.register(new_user_pk.clone()), true);
         assert_eq!(contract.registered_loans.len(), 1);
         assert_eq!(contract.registered_loans.get(&new_user_pk), Some(Vec::new()));
@@ -125,9 +130,12 @@ mod tests {
 
     #[test]
     fn test_verified_loan() {
-        let prover_pk = PublicKey::from_str("ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
+        let prover = accounts(1);
+        let context = get_context(prover.clone());
+        testing_env!(context.build());
+
         let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
-        let mut contract = Contract::initialize(prover_pk);
+        let mut contract = Contract::initialize(prover);
         assert_eq!(contract.register(new_user_pk.clone()), true);
         assert_eq!(contract.registered_loans.len(), 1);
         assert_eq!(contract.registered_loans.get(&new_user_pk), Some(Vec::new()));
@@ -139,12 +147,29 @@ mod tests {
 
     #[test]
     fn test_verified_loan_unregistered_user() {
-        let prover_pk = PublicKey::from_str("ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
-        let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
-        let mut contract = Contract::initialize(prover_pk);
+        let prover = accounts(1);
+        let context = get_context(prover.clone());
+        testing_env!(context.build());
 
+        let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
+        let mut contract = Contract::initialize(prover);
 
         assert_eq!(contract.verified_loan(new_user_pk.clone(), U128(123)), false);
         assert_eq!(contract.registered_loans.len(), 0);
+    }
+
+    #[test]
+    fn test_verified_loan_wrong_caller() {
+        let prover = accounts(1);
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+
+        let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
+        let mut contract = Contract::initialize(prover);
+
+        assert_eq!(contract.register(new_user_pk.clone()), true);
+
+        assert_eq!(contract.verified_loan(new_user_pk.clone(), U128(123)), false);
+        assert_eq!(contract.registered_loans.len(), 1);
     }
 }
