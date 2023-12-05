@@ -4,6 +4,11 @@ use dep::std::println;
 global HEURISTICS = 1;
 global PARAMS = 16;
 
+//global lender_signatory = pubkey (SUDO)
+
+//global bank_signatory = publickeyhere
+
+// Introduce more fns
 struct HeuristicRegistry {
     // Require that the balance is 4x the requested amount
     fourx: fn(Field, Field) -> bool,
@@ -13,6 +18,8 @@ impl HeuristicRegistry {
     fn new() -> Self {
         Self {
             fourx: |requested: Field, balance: Field| (balance * 4) as u127 >= requested as u127, 
+            // Lender signatory here schnorr_sig_verification_params here!
+            // Schnorr signatures, for signatories([Signatures]),
         }
     }
     fn apply(self, id: u8, entry: [Field; PARAMS], requested: Field) -> bool {
