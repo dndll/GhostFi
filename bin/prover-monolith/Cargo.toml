@@ -6,3 +6,21 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+log = "*"
+pretty_env_logger = "*"
+eyre = "*"
+hex-literal = "*"
+hex = "*"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_with = { version = "*", features = ["hex"] }
+
+# Http
+axum = "0.6.20"
+tokio = { version = "*", features = ["full"] }
+
+# Crypto
+rand_chacha = "0.3.1"
+near-crypto = "0.17.0"
+near-account-id = "0.17.0"
