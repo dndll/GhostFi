@@ -5,4 +5,4 @@ edition = "2021"
 compiler_version = ">=0.19.4"
 
 [workspace]
-members = ["circuits/simple4x", "circuits/ed25519", "circuits/biguint"]
+members = ["circuits/apply", "circuits/ed25519", "circuits/biguint"]
