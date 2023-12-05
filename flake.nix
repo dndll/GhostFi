@@ -21,9 +21,13 @@
           rustc = rustVersion;
         };
       in {
-        stdenv = pkgs.clangStdenv;
+        stdenv = pkgs.llvmPackages.libcxxStdenv;
         devShell = pkgs.mkShell {
-          LIBCLANG_PATH = pkgs.libclang.lib + "/lib/";
+          LIBCLANG_PATH = pkgs.llvmPackages.libclang.lib + "/lib/";
+          #LD_LIBRARY_PATH = "${pkgs.llvmPackages.libclang.lib}/lib/:${pkgs.llvmPackages_11.libclang.lib}/lib:/usr/local/lib";
+          LD_LIBRARY_PATH = "${pkgs.llvmPackages.libclang.lib}/lib:${pkgs.llvmPackages.libcxx}/lib:${pkgs.llvmPackages.libcxxabi}/lib:/usr/local/lib";
+
+
           inputsFrom = [
             noir-lang
             # noir_wasm
@@ -38,8 +42,10 @@
             openssl
             pkg-config
             # clang
-            llvmPackages_11.bintools 
-            llvmPackages_11.libclang 
+            llvmPackages.bintools 
+            llvmPackages.libclang 
+            llvmPackages.libcxx
+            llvmPackages.libcxxabi
             protobuf
 
             yarn
