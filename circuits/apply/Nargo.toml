@@ -1,5 +1,5 @@
 [package]
-name = "simple4x"
+name = "apply"
 type = "bin"
 
 [dependencies]
