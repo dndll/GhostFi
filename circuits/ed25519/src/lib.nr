@@ -85,6 +85,7 @@ fn check_scalar(mut signature_s: [u8; 32]) -> Option<u32> {
       Option::none()
     } else {
       signature_s[31] &= 127;
+      // Probably a bug, can test
       let s = bytes32_to_field(signature_s);
       Option::some(s as u32)
     }
