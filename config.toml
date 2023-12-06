@@ -1,0 +1,7 @@
+implicit = ""
+account = "gfi.testnet"
+public = "ed25519:"
+secret = "ed25519:"
+proof_path = "proofs"
+rpc = "https://rpc.testnet.near.org"
+circuit_workspace = "/home/common/projects/GhostFi"

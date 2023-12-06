@@ -1,0 +1,11 @@
+{
+  "public_key": "ed25519:Ho8a7vHSuGJpSgPuPBXNnz4njYZTBTAbruoTBdcAwvxp",
+  "requested_amount": 100,
+  "params": [
+    {
+      "Simple": {
+        "balance": 25
+      }
+    }
+  ]
+}

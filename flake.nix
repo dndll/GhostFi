@@ -1,5 +1,5 @@
 {
-  description = "A flake to support reproducible development of t3rn";
+  description = "A flake to support reproducible";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -35,6 +35,11 @@
             # acvm_js
           ];
 
+          buildInputs = with pkgs; [
+            systemd 
+            pkg-config
+            libudev
+          ]
           nativeBuildInputs = with pkgs; [ 
             bashInteractive
             taplo
@@ -48,8 +53,8 @@
             llvmPackages.libcxxabi
             protobuf
 
-            yarn
-            nodejs-18_x
+            #yarn
+            #nodejs-18_x
 
             noir-lang.packages.${system}.nargo
 

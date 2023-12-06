@@ -1,66 +1,57 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
-use near_sdk::{env, log, near_bindgen, AccountId, PublicKey, PanicOnDefault};
 use near_sdk::json_types::U128;
+use near_sdk::{env, log, near_bindgen, AccountId, Balance, PanicOnDefault, Promise};
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
-    pub registered_loans: UnorderedMap<PublicKey, Vec<U128>>, // public_key -> loan amounts
+    pub registered_loans: UnorderedMap<AccountId, Vec<U128>>, // public_key -> loan amounts
     pub prover: AccountId,
 }
 
 #[near_bindgen]
 impl Contract {
-
     #[init]
-    pub fn initialize(
-        prover: AccountId,
-    ) -> Self {
+    pub fn initialize(prover: AccountId) -> Self {
         return Self {
             registered_loans: UnorderedMap::new(b"s".to_vec()),
-            prover: prover,
+            prover,
         };
     }
 
-    pub fn register(
-        &mut self,
-        user_pk: PublicKey
-    ) -> bool {
-        if self.is_user_registered(user_pk.clone()) {
-            log!(format!(
-                "User is already registered"
-            ));
+    pub fn register(&mut self, user: AccountId) -> bool {
+        if self.is_user_registered(&user) {
+            log!(format!("User is already registered"));
             return false;
         }
-        self.registered_loans.insert(&user_pk, &Vec::new());
+        self.registered_loans.insert(&user, &Vec::new());
 
         true
     }
 
-    pub fn verified_loan(&mut self, user_pk: PublicKey, amount: U128) -> bool{
+    pub fn verified_loan(&mut self, user: AccountId, amount: U128) -> bool {
         if env::predecessor_account_id() != self.prover {
-            log!(format!(
-                "Forbidden"
-            ));
+            log!(format!("Forbidden"));
             return false;
         }
-        if !self.is_user_registered(user_pk.clone()) {
-            log!(format!(
-                "User is not registered"
-            ));
+        if !self.is_user_registered(&user) {
+            log!(format!("User is not registered"));
             return false;
         }
 
-        let mut loans = self.registered_loans.get(&user_pk).unwrap();
+        let mut loans = self.registered_loans.get(&user).unwrap();
         loans.push(amount);
-        self.registered_loans.insert(&user_pk, &loans);
+        self.registered_loans.insert(&user, &loans);
+
+        let token_amt = near_sdk::ONE_NEAR * amount.0;
+        Promise::new(user).transfer(token_amt);
 
         true
     }
 
-    fn is_user_registered(&self, user_pk: PublicKey) -> bool {
-        match self.registered_loans.get(&user_pk) {
+    fn is_user_registered(&self, user: &AccountId) -> bool {
+        match self.registered_loans.get(&user) {
             Some(_) => true,
             None => false,
         }
@@ -72,7 +63,7 @@ mod tests {
     use std::str::FromStr;
 
     use near_sdk::test_utils::{accounts, VMContextBuilder};
-    use near_sdk::{testing_env};
+    use near_sdk::testing_env;
 
     use super::*;
 
@@ -107,25 +98,26 @@ mod tests {
     #[test]
     fn test_register_new_user() {
         let prover = AccountId::from_str("prover.near").unwrap();
-        let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
+        let new_user = AccountId::from_str("user.near").unwrap();
         let mut contract = Contract::initialize(prover);
-        assert_eq!(contract.register(new_user_pk.clone()), true);
+        assert_eq!(contract.register(new_user.clone()), true);
         assert_eq!(contract.registered_loans.len(), 1);
-        assert_eq!(contract.registered_loans.get(&new_user_pk), Some(Vec::new()));
+        assert_eq!(contract.registered_loans.get(&new_user), Some(Vec::new()));
     }
 
     #[test]
     fn test_register_existing_user() {
         let prover = AccountId::from_str("prover.near").unwrap();
-        let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
-        let mut contract = Contract::initialize(prover);
-        assert_eq!(contract.register(new_user_pk.clone()), true);
-        assert_eq!(contract.registered_loans.len(), 1);
-        assert_eq!(contract.registered_loans.get(&new_user_pk), Some(Vec::new()));
+        let new_user = AccountId::from_str("user.near").unwrap();
 
-        assert_eq!(contract.register(new_user_pk.clone()), false);
+        let mut contract = Contract::initialize(prover);
+        assert_eq!(contract.register(new_user.clone()), true);
         assert_eq!(contract.registered_loans.len(), 1);
-        assert_eq!(contract.registered_loans.get(&new_user_pk), Some(Vec::new()));
+        assert_eq!(contract.registered_loans.get(&new_user), Some(Vec::new()));
+
+        assert_eq!(contract.register(new_user.clone()), false);
+        assert_eq!(contract.registered_loans.len(), 1);
+        assert_eq!(contract.registered_loans.get(&new_user), Some(Vec::new()));
     }
 
     #[test]
@@ -134,15 +126,15 @@ mod tests {
         let context = get_context(prover.clone());
         testing_env!(context.build());
 
-        let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
+        let user = AccountId::from_str("user.near").unwrap();
         let mut contract = Contract::initialize(prover);
-        assert_eq!(contract.register(new_user_pk.clone()), true);
+        assert_eq!(contract.register(user.clone()), true);
         assert_eq!(contract.registered_loans.len(), 1);
-        assert_eq!(contract.registered_loans.get(&new_user_pk), Some(Vec::new()));
+        assert_eq!(contract.registered_loans.get(&user), Some(Vec::new()));
 
-        assert_eq!(contract.verified_loan(new_user_pk.clone(), U128(123)), true);
+        assert_eq!(contract.verified_loan(user.clone(), U128(123)), true);
         assert_eq!(contract.registered_loans.len(), 1);
-        assert_eq!(contract.registered_loans.get(&new_user_pk), Some(vec![U128(123)]));
+        assert_eq!(contract.registered_loans.get(&user), Some(vec![U128(123)]));
     }
 
     #[test]
@@ -151,10 +143,10 @@ mod tests {
         let context = get_context(prover.clone());
         testing_env!(context.build());
 
-        let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
+        let user = AccountId::from_str("user.near").unwrap();
         let mut contract = Contract::initialize(prover);
 
-        assert_eq!(contract.verified_loan(new_user_pk.clone(), U128(123)), false);
+        assert_eq!(contract.verified_loan(user.clone(), U128(123)), false);
         assert_eq!(contract.registered_loans.len(), 0);
     }
 
@@ -164,12 +156,12 @@ mod tests {
         let context = get_context(accounts(0));
         testing_env!(context.build());
 
-        let new_user_pk = PublicKey::from_str("ed25519:7E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp").unwrap();
+        let user = AccountId::from_str("user.near").unwrap();
         let mut contract = Contract::initialize(prover);
 
-        assert_eq!(contract.register(new_user_pk.clone()), true);
+        assert_eq!(contract.register(user.clone()), true);
 
-        assert_eq!(contract.verified_loan(new_user_pk.clone(), U128(123)), false);
+        assert_eq!(contract.verified_loan(user.clone(), U128(123)), false);
         assert_eq!(contract.registered_loans.len(), 1);
     }
 }
