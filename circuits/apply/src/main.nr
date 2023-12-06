@@ -1,10 +1,12 @@
 use dep::ed25519;
 use dep::std::println;
+use dep::schnorr;
 
-global HEURISTICS = 1;
+global HEURISTICS = 2;
 global PARAMS = 16;
 
-//global lender_signatory = pubkey (SUDO)
+global lender_signatory_x = pubkey (SUDO)
+global lender_signatory_y = pubkey (SUDO)
 
 //global bank_signatory = publickeyhere
 
@@ -12,13 +14,14 @@ global PARAMS = 16;
 struct HeuristicRegistry {
     // Require that the balance is 4x the requested amount
     fourx: fn(Field, Field) -> bool,
+    verify_lender_signatory: fn(Field, Field, [u8; 64], [u8]) -> bool,
 }
 
 impl HeuristicRegistry {
     fn new() -> Self {
         Self {
             fourx: |requested: Field, balance: Field| (balance * 4) as u127 >= requested as u127, 
-            // Lender signatory here schnorr_sig_verification_params here!
+            verify_lender_signatory: |public_key_x: Field, public_key_y: Field, signature: [u8; 64], message: [u8]| schnorr::verify_signature(public_key_x, public_key_y, signature, message),
             // Schnorr signatures, for signatories([Signatures]),
         }
     }
@@ -26,6 +29,9 @@ impl HeuristicRegistry {
         if id == 0 {
             let f = self.fourx;
             f(requested, entry[0])
+        } else if id == 1 {
+            let f = self.verify_lender_signatory;
+            f(lender_signatory_x, lender_signatory_y, entry[0], entry[1])
         } else {
             false
         }
