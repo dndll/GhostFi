@@ -94,19 +94,11 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_public_key_creation() {
-        let config = crate::config::Config::from("../../local");
-        let account_id: AccountId = config.account.parse().unwrap();
-        let sk = SecretKey::from_str(&config.secret).unwrap();
-        let pk = sk.public_key();
 
-        println!("{}", pk);
-        println!("{}", hex::encode(pk.key_data()));
-        println!("{}", sk);
-        let signer = near_crypto::InMemorySigner::from_secret_key(
-            account_id,
-            SecretKey::from_str(&config.secret).unwrap(),
-        );
+    #[test]
+    fn test_sk() {
+        let sk = SecretKey::from_random(near_crypto::KeyType::ED25519);
+        println!("{}", sk.to_string());
+        
     }
 }

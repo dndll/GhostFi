@@ -1,6 +1,4 @@
 account = "gfi.testnet"
-public = "ed25519:"
-secret = "ed25519:"
-proof_path = "path to proofs/nargo proofs"
+secret = "5znd5chmzLmfWcvxXtRLjLWe17ZN4rwKBDy4gzMCRf6Z4beq2R2f3pKpC52S5Srbbb3MruLYFMpWp4pQFMKtcjND"
 rpc = "https://rpc.testnet.near.org"
-circuit_workspace = "/home/common/projects/GhostFi"
+nargo_workspace_dir = "/home/common/projects/GhostFi"

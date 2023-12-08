@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use config::{Config as ConfigExt, ConfigError, Environment, File};
 use near_account_id::AccountId;
 use near_crypto::SecretKey;
@@ -11,10 +12,8 @@ pub struct Config {
     pub secret: SecretKey,
     /// The near rpc provider
     pub rpc: String,
-    /// The location where proofs are stored
-    pub proof_path: String,
     /// The circuits location, usually where `Nargo.toml` is
-    pub circuit_workspace: String,
+    pub nargo_workspace_dir: PathBuf,
 }
 
 impl Config {
