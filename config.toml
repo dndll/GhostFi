@@ -1,7 +1,6 @@
-implicit = ""
 account = "gfi.testnet"
 public = "ed25519:"
 secret = "ed25519:"
-proof_path = "proofs"
+proof_path = "path to proofs/nargo proofs"
 rpc = "https://rpc.testnet.near.org"
 circuit_workspace = "/home/common/projects/GhostFi"
