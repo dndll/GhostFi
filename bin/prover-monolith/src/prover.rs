@@ -1,3 +1,4 @@
+use eyre::Report;
 use near_crypto::PublicKey;
 use serde::{Deserialize, Serialize};
 use tempfile::{tempfile, NamedTempFile, TempDir};
@@ -100,14 +101,6 @@ impl From<Proof> for InternalVerificationRequest {
     }
 }
 
-// Here we need to just call the nargo cli to save time, and convert the proof request into
-// something noir understands
-//
-
-fn create_tempfile() -> Result<NamedTempFile> {
-    tempfile::NamedTempFile::new().map_err(Into::into)
-}
-
 pub enum Command {
     Prove(ProofRequest),
     Verify(Proof),
@@ -134,22 +127,27 @@ fn bootstrap_command<'process>(
         .arg(path)
 }
 
-pub type CommandStdout = (String, Command);
-pub fn execute<T: TryFrom<(Config, CommandStdout), Error = eyre::Report>>(
-    config: &Config,
+pub fn execute<'a, T: TryFrom<(&'a Config, String, Command), Error = Report>>(
+    config: &'a Config,
     command: Command,
 ) -> Result<T> {
+    // This is to be sure that tempdir doesn't get forcibly dropped
     let temp_dir = tempfile::tempdir()?;
     execute_inner(config, command, &temp_dir)
 }
 
-pub fn execute_inner<T: TryFrom<(Config, CommandStdout), Error = eyre::Report>>(
-    config: &Config,
+/// Execute a call to nargo.
+///
+/// This process approach is a bit of a hack for the purpose of speed. Ideally
+/// we would just integrate with the barretenberg backend directly.
+pub fn execute_inner<'a, T: TryFrom<(&'a Config, String, Command), Error = Report>>(
+    config: &'a Config,
     command: Command,
     temp_dir: &TempDir,
 ) -> Result<T> {
     let path = temp_dir.path().join("Params.toml");
     let mut file = File::create(&path)?;
+    log::debug!("Created file: {:?}", path);
 
     let mut process = ProcessCommand::new("nargo");
     let process = bootstrap_command(&command, &mut process, &path);
@@ -160,30 +158,23 @@ pub fn execute_inner<T: TryFrom<(Config, CommandStdout), Error = eyre::Report>>(
         Command::Prove(req) => {
             let internal = InternalProofRequest::from(req.clone());
             let toml_str = toml::to_string_pretty(&internal)?;
-            log::debug!("TOML: {}", toml_str);
+            log::debug!("Proof TOML: {}", toml_str);
             file.write_all(toml_str.as_bytes())?;
         }
         Command::Verify(req) => {
             let internal = InternalVerificationRequest::from(req.clone());
             let toml_str = toml::to_string_pretty(&internal)?;
-            log::debug!("TOML: {}", toml_str);
+            log::debug!("Verify TOML: {}", toml_str);
             file.write_all(toml_str.as_bytes())?;
 
-            let proof_path = PathBuf::from(&config.proof_path).join("apply.proof");
-            #[cfg(test)]
-            let proof_path = PathBuf::from("../../proofs/apply.proof");
-
-            log::debug!("Proof path: {:?}", proof_path);
-            let mut proof_file = File::create(&proof_path)?;
+            let mut proof_file = proof_file(config, false)?;
             proof_file.write_all(&hex::encode(&req.inner).as_bytes())?;
         }
     }
-    let current_dir = &config.circuit_workspace;
-    log::debug!("Current dir: {}", current_dir);
 
     log::debug!("Executing {:?}", process);
     let result = process
-        .current_dir(current_dir)
+        .current_dir(&config.nargo_workspace_dir)
         .spawn()?
         .wait_with_output()?;
 
@@ -192,7 +183,7 @@ pub fn execute_inner<T: TryFrom<(Config, CommandStdout), Error = eyre::Report>>(
     if result.status.success() {
         let stdout = String::from_utf8_lossy(&result.stdout);
         log::info!("Output {}", stdout);
-        T::try_from((config.clone(), (stdout.to_string(), command)))
+        (config, stdout.to_string(), command).try_into()
     } else {
         let stderr = String::from_utf8_lossy(&result.stderr);
         log::error!("{}", stderr);
@@ -200,19 +191,13 @@ pub fn execute_inner<T: TryFrom<(Config, CommandStdout), Error = eyre::Report>>(
     }
 }
 
-impl TryFrom<(Config, CommandStdout)> for Proof {
-    type Error = eyre::Report;
+impl<'a> TryFrom<(&'a Config, String, Command)> for Proof {
+    type Error = Report;
 
-    fn try_from(value: (Config, CommandStdout)) -> Result<Self> {
-        let (config, (_, cmd)) = value;
+    fn try_from(value: (&Config, String, Command)) -> Result<Self> {
+        let (config, _, cmd) = value;
 
-        let proof_path = PathBuf::from(config.proof_path).join("apply.proof");
-
-        #[cfg(test)]
-        let proof_path = PathBuf::from("../../proofs/apply.proof");
-
-        log::debug!("Proof path: {}", proof_path.display());
-        let mut proof_file = File::open(proof_path)?;
+        let mut proof_file = proof_file(config, true)?;
 
         let mut proof_hex = String::new();
         proof_file.read_to_string(&mut proof_hex)?;
@@ -231,23 +216,51 @@ impl TryFrom<(Config, CommandStdout)> for Proof {
     }
 }
 
-impl TryFrom<(Config, CommandStdout)> for VerificationResult {
-    type Error = eyre::Report;
-    fn try_from(value: (Config, CommandStdout)) -> std::result::Result<Self, Self::Error> {
+impl<'a> TryFrom<(&'a Config, String, Command)> for VerificationResult {
+    type Error = Report;
+    fn try_from(_: (&Config, String, Command)) -> std::result::Result<Self, Self::Error> {
         Ok(VerificationResult(true))
     }
+}
+
+fn proof_dir(config: &Config) -> PathBuf {
+    config
+        .nargo_workspace_dir
+        .join("proofs")
+        .join("apply.proof")
+}
+
+fn proof_file(config: &Config, read_only: bool) -> Result<File> {
+    let proof_path = proof_dir(config);
+
+    #[cfg(test)]
+    let proof_path = PathBuf::from("../../proofs/apply.proof");
+    let file = if read_only {
+        File::open(proof_path)
+    } else {
+        File::create(proof_path)
+    }?;
+    Ok(file)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use acvm::FieldElement;
-    use blake2::Digest;
-    use near_crypto::{InMemorySigner, SecretKey, Signature};
-    use std::{io::Read, str::FromStr};
+    use near_crypto::{SecretKey, Signature};
+    use std::str::FromStr;
 
     fn get_config() -> crate::config::Config {
         crate::config::Config::from("../../config")
+    }
+
+    #[test]
+    fn proof_dir_from_config() {
+        let config = get_config();
+        let dir = proof_dir(&config);
+        assert_eq!(
+            dir,
+            PathBuf::from("/home/common/projects/GhostFi/proofs/apply.proof")
+        );
     }
 
     #[test]
@@ -292,18 +305,6 @@ mod tests {
         let proof: Proof = serde_json::from_str(&json).unwrap();
         let proven: VerificationResult = execute(&config, Command::Verify(proof)).unwrap();
         println!("Verified: {:?}", proven.0);
-    }
-
-    #[test]
-    fn test_file() {
-        let mut file = create_tempfile().unwrap();
-        println!("{:?}", file);
-        let file_debug = format!("{:?}", file);
-        write!(file, "hello").unwrap();
-
-        let mut buf = String::new();
-        file.read_to_string(&mut buf).unwrap();
-        println!("{}", buf);
     }
 
     #[test]

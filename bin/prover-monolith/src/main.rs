@@ -1,51 +1,45 @@
 use axum::{
     extract::{Query, State},
-    http::Method,
     routing::post,
     Json, Router,
 };
 use eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 
 pub mod config;
 pub mod contract;
 pub mod prover;
-
-pub type Hash = [u8; 32];
-
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
-    log::debug!("starting up");
-
     let config = config::Config::new().expect("Failed to load config");
-    log::debug!("config: {:#?}", config);
 
     let contract_client = Arc::new(contract::Client::new(&config));
 
-    let cors = CorsLayer::permissive();
-
     let controller = Router::new()
+        // Request to prove a credit application
         .route("/prove", post(prove).with_state(config.clone()))
+        // Prove and then soft verify a credit appllication
         .route(
             "/prove/verify",
             post(prove_verify).with_state((contract_client.clone(), config.clone())),
         )
+        // Verify a proof and release the funds
         .route(
             "/verify",
             post(verify).with_state((contract_client.clone(), config.clone())),
         )
-        .layer(cors);
+        .layer(CorsLayer::permissive());
 
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
         .serve(controller.into_make_service())
         .await
-        .unwrap();
+        .expect("Failed to start server");
 }
 
+/// A request to prove a credit application
 #[serde_with::serde_as]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProofRequest {
@@ -53,8 +47,6 @@ pub struct ProofRequest {
     requested_amount: u64,
     params: Vec<Heuristic>,
 }
-
-const HEURISTIC_AMT: usize = 8;
 
 impl ProofRequest {
     pub fn is_valid(&self) -> bool {
@@ -70,6 +62,9 @@ pub enum Heuristic {
 
 impl Into<u8> for Heuristic {
     fn into(self) -> u8 {
+        // The maximum amount of heuristics we offer
+        const HEURISTIC_AMT: usize = 8;
+
         let byte = match self {
             Heuristic::Simple { .. } => 1,
         };
@@ -81,6 +76,11 @@ impl Into<u8> for Heuristic {
     }
 }
 
+/// A proof of a credit application
+/// This requires account_id to be populated by the caller for the funds to be released onchain.
+///
+/// We can modify this in the future to support public keys and allow the user to have 
+/// multiple loans against keys, and recover the loan if the key is changed.
 #[serde_with::serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Proof {
@@ -105,6 +105,7 @@ async fn prove_verify(
 ) -> Json<bool> {
     let proof = prove(State(config.clone()), Json(req)).await.0;
     if let Some(proof) = proof {
+        // Ensure we don't submit for soft-approvals
         let no_submit = Submission { submit: false };
         verify(State((client, config)), Some(Query(no_submit)), Json(proof)).await
     } else {
@@ -122,6 +123,7 @@ impl Default for Submission {
     }
 }
 
+/// Newtype to implement From<CommandStdout>
 pub struct VerificationResult(bool);
 
 async fn verify(
