@@ -1,6 +1,8 @@
 use near_crypto::PublicKey;
 use serde::{Deserialize, Serialize};
 use tempfile::{tempfile, NamedTempFile, TempDir};
+use registrar::{extract_passport_info};
+use mrtd::{Document};
 
 use crate::{config::Config, Heuristic, Proof, ProofRequest, Result, VerificationResult};
 use std::{
@@ -73,8 +75,9 @@ impl From<Heuristic> for InternalHeuristic {
     fn from(value: Heuristic) -> Self {
         let mut params = Self::sparse_params();
 
-        match value {
+        match &value {
             Heuristic::Simple { balance } => params[0] = balance.to_string(),
+            Heuristic::Passport { country } => params[0] = country.to_string(),
         }
 
         InternalHeuristic {
@@ -400,5 +403,24 @@ mod tests {
                 sig_x1, sig_x2, sig_y1, sig_y2, msg
             )
         }
+    }
+
+    #[test]
+    fn passport_simple_test() {
+        let doc: Document = extract_passport_info().into();
+        let passport = match doc {
+            Document::Passport(p) => p,
+            Document::IdentityCard(_) => panic!("Wrong doc type")
+        };
+
+        let country = passport.country;
+        let country_bytes = country.as_bytes();
+        println!("COUNTRY: {:?}", &country_bytes);
+
+        let country = hex::encode(&country_bytes);
+        println!(
+            "\"0x{}\"",
+            country
+        )
     }
 }

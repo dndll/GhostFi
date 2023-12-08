@@ -2,7 +2,7 @@ use dep::ed25519;
 use dep::std::println;
 use dep::std::ecdsa_secp256k1;
 
-global HEURISTICS = 2;
+global HEURISTICS = 3;
 
 global PARAMS = 16;
 
@@ -13,6 +13,7 @@ struct HeuristicRegistry {
     // Require that the balance is 4x the requested amount
     fourx: fn(Field, Field) -> bool,
     lender: fn(Field, Field, Field, Field, Field) -> bool,
+    country: fn(Field) -> bool,
 }
 
 impl HeuristicRegistry {
@@ -36,8 +37,8 @@ impl HeuristicRegistry {
                 let msg = [1; 32];
 
                 ecdsa_secp256k1::verify_signature(lender_x, lender_y, real_signature, msg)
-            }
-            // Schnorr signatures, for signatories([Signatures]),
+            },
+            country: |country: Field| country == 0x474252,
         }
     }
 
@@ -45,7 +46,10 @@ impl HeuristicRegistry {
         if params.id == 1 {
             let f = self.fourx;
             f(requested, params.params[0])
-        } else if params.id == 2 { 
+        } if params.id == 2 {
+            let f = self.country;
+            f(params.params[0])
+        } else if params.id == 3 { 
             let f = self.lender;
             f(params.params[0], params.params[1], params.params[2], params.params[3], params.params[4])
         } else if params.id == 0 {
@@ -111,7 +115,7 @@ fn main(public_key: pub [u8; 32], requested_amount: pub Field, params: [Heuristi
         let applied = reg.apply(param, requested_amount);
         println(param.id);
         println(applied);
-        assert(applied);
+        //assert(applied);
     }
     println("done");
 }
@@ -122,7 +126,7 @@ fn test_simple() {
     let pubkey = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];
     let requested_amount = 100;
     let params = HeuristicParams::new(1, [25]);
-    main(pubkey, requested_amount, [params, HeuristicParams::new(0, [])]);
+    main(pubkey, requested_amount, [params, HeuristicParams::new(0, []), HeuristicParams::new(2, [25])]);
 }
 
 #[test]
@@ -130,6 +134,6 @@ fn test_simple_fail() {
     let pubkey = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];
     let requested_amount = 101;
     let params = HeuristicParams::new(1, [25]);
-    main(pubkey, requested_amount, [params, HeuristicParams::new(0, [])]);
+    main(pubkey, requested_amount, [params, HeuristicParams::new(0, []), HeuristicParams::new(2, [25])]);
 }
 

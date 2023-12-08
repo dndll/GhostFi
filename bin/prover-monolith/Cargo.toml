@@ -34,3 +34,6 @@ near-fetch = "*"
 acvm = { git = "https://github.com/noir-lang/noir.git" }
 num-bigint = "0.4.3"
 num-traits = "0.2.15"
+
+registrar = { path = "../../crates/registrar" }
+mrtd = "0.5.1"
