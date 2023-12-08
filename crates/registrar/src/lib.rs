@@ -4,7 +4,7 @@ use mrtd::{parse, Document};
 // TODO: could use openpace to also read ePassport keys
 // TODO: this is a highly specialized sample, should be refactored to support many passports
 // with more sophisticated tools, this just gets us there for the moment
-fn extract_passport_info() -> Document {
+pub fn extract_passport_info() -> Document {
     use std::path::Path;
     let mut api = leptess::tesseract::TessApi::new(
         Some(&format!("{}/tessdata", env!("CARGO_MANIFEST_DIR"))),

@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
+use registrar::extract_passport_info;
 
 pub mod config;
 pub mod contract;
@@ -66,12 +67,14 @@ impl ProofRequest {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Heuristic {
     Simple { balance: u64 },
+    Passport { country: String }
 }
 
 impl Into<u8> for Heuristic {
     fn into(self) -> u8 {
         let byte = match self {
             Heuristic::Simple { .. } => 1,
+            Heuristic::Passport { .. } => 2,
         };
         assert!(
             byte <= HEURISTIC_AMT,
@@ -153,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_proof_deserialisation() {
-        let json = std::fs::read_to_string("../../fixtures/proof.json").unwrap();
+        let json = std::fs::read_to_string("fixtures/proof.json").unwrap();
         let proof: Proof = serde_json::from_str(&json).unwrap();
         println!("{:?}", proof);
     }
@@ -163,5 +166,11 @@ mod tests {
         let json = std::fs::read_to_string("fixtures/simple.json").unwrap();
         let proof: ProofRequest = serde_json::from_str(&json).unwrap();
         println!("{:?}", proof);
+    }
+
+    #[test]
+    fn test_passport() {
+        let passport = extract_passport_info();
+        println!("{:?}", passport);
     }
 }
