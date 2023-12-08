@@ -126,7 +126,7 @@ fn test_simple() {
     let pubkey = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];
     let requested_amount = 100;
     let params = HeuristicParams::new(1, [25]);
-    main(pubkey, requested_amount, [params, HeuristicParams::new(0, []), HeuristicParams::new(2, [25])]);
+    main(pubkey, requested_amount, [params, HeuristicParams::new(0, []), HeuristicParams::new(2, [0x474252])]);
 }
 
 #[test]
@@ -134,6 +134,6 @@ fn test_simple_fail() {
     let pubkey = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];
     let requested_amount = 101;
     let params = HeuristicParams::new(1, [25]);
-    main(pubkey, requested_amount, [params, HeuristicParams::new(0, []), HeuristicParams::new(2, [25])]);
+    main(pubkey, requested_amount, [params, HeuristicParams::new(0, []), HeuristicParams::new(2, [0x474252])]);
 }
 
