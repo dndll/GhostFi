@@ -24,22 +24,13 @@
         stdenv = pkgs.llvmPackages.libcxxStdenv;
         devShell = pkgs.mkShell {
           LIBCLANG_PATH = pkgs.llvmPackages.libclang.lib + "/lib/";
-          #LD_LIBRARY_PATH = "${pkgs.llvmPackages.libclang.lib}/lib/:${pkgs.llvmPackages_11.libclang.lib}/lib:/usr/local/lib";
           LD_LIBRARY_PATH = "${pkgs.llvmPackages.libclang.lib}/lib:${pkgs.llvmPackages.libcxx}/lib:${pkgs.llvmPackages.libcxxabi}/lib:/usr/local/lib";
 
 
           inputsFrom = [
             noir-lang
-            # noir_wasm
-            # noirc_abi_wasm
-            # acvm_js
           ];
 
-          buildInputs = with pkgs; [
-            systemd 
-            pkg-config
-            libudev
-          ]
           nativeBuildInputs = with pkgs; [ 
             bashInteractive
             taplo
@@ -52,7 +43,9 @@
             llvmPackages.libcxx
             llvmPackages.libcxxabi
             protobuf
+            leptonica
 
+            pkg-config
             #yarn
             #nodejs-18_x
 

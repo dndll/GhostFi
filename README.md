@@ -1,6 +1,7 @@
 # 💸 GhostFi 💸
 
 [GhostFi is on BOS!](https://test.near.org/ghostfi.testnet/widget/GhostFi)
+
 [Contract](https://testnet.nearblocks.io/address/ghostfi.testnet)
 
 GhostFi is an untrusted lending platform where you prove, without interaction with the lender, that you can meet lending criteria set by the lender.
@@ -155,3 +156,11 @@ If there was additional work made on this system, it would be around:
 
 
 # Getting started
+
+The BOS widget is here: [GhostFi is on BOS!](https://test.near.org/ghostfi.testnet/widget/GhostFi)
+
+You'll need to setup your backend first. If you're a nix user, you should be able to run `direnv allow .` and be able to compile the prover immediately.
+
+If not, you can take dependency inspiration from `flake.nix`.
+
+Then you'd need to deploy your contract, setup the confic file and then input the URL in the BOS component.
