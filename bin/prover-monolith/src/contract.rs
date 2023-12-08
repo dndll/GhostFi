@@ -1,9 +1,8 @@
-use std::str::FromStr;
-
-use crate::{Proof, Result};
+use crate::{config::Config, Proof, Result};
 use near_account_id::AccountId;
-use near_crypto::{InMemorySigner, PublicKey, SecretKey};
+use near_crypto::{InMemorySigner, SecretKey};
 use serde_json::json;
+use std::str::FromStr;
 
 #[derive(Clone)]
 pub struct Client {
@@ -13,20 +12,26 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(config: &crate::config::Config) -> Self {
-        let account_id: AccountId = config.account.parse().unwrap();
-        log::info!("Using account {}", account_id);
-        let sk = SecretKey::from_str(&config.secret).unwrap();
-        log::debug!("Using sk {:?}", sk);
-        let signer = near_crypto::InMemorySigner::from_secret_key(account_id, sk);
+    pub fn new(config: &Config) -> Self {
+        log::debug!("Initialising client, config {:?}", config);
+
+        let signer = || -> Result<InMemorySigner> {
+            Ok(near_crypto::InMemorySigner::from_secret_key(
+                config.account.clone(),
+                config.secret.clone(),
+            ))
+        };
 
         let client = near_fetch::Client::new(&config.rpc);
         Self {
-            signer,
+            signer: signer().expect("Failed to create signer"),
             contract: config.account.parse().unwrap(),
             client,
         }
     }
+
+    /// Interacts with the contract to inform the lender that the loan has been
+    /// verified successfully
     pub async fn verified(&self, proof: Proof) -> Result<bool> {
         let account_id = proof
             .account_id

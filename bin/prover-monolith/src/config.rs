@@ -1,13 +1,19 @@
 use config::{Config as ConfigExt, ConfigError, Environment, File};
+use near_account_id::AccountId;
+use near_crypto::SecretKey;
 use serde::{Deserialize, Serialize};
-use std::env;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub account: String,
-    pub secret: String,
-    pub proof_path: String,
+    /// The near account for integration with the contract
+    pub account: AccountId,
+    /// The private key for the account that integrates with the contract
+    pub secret: SecretKey,
+    /// The near rpc provider
     pub rpc: String,
+    /// The location where proofs are stored
+    pub proof_path: String,
+    /// The circuits location, usually where `Nargo.toml` is
     pub circuit_workspace: String,
 }
 
