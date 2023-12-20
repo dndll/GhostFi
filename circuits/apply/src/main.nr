@@ -35,7 +35,7 @@ impl HeuristicRegistry {
                 }
                 let msg = [1; 32];
 
-                ecdsa_secp256k1::verify_signature(lender_x, lender_y, real_signature, msg)
+                ecdsa_secp256k1::verify_signature(lender_x, lender_y, signature, msg)
             }
             // Schnorr signatures, for signatories([Signatures]),
         }
